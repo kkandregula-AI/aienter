@@ -702,13 +702,26 @@ function buildSliders(){
   });
 }
 function total(){return LEVERS.reduce((s,l)=>s+alloc[l.k],0);}
+let shown=false;
 function refreshTotal(){
   const t=total();$('budgUsed').textContent=t;
   const el=$('budgSaved');
-  if(t>100){el.textContent='over by $'+(t-100)+'M';el.className='over';$('simBtn').disabled=true;}
-  else{el.textContent=(100-t)+'M free';el.className='ok';$('simBtn').disabled=false;}
+  const over=t>100;
+  if(over){el.textContent='over by $'+(t-100)+'M';el.className='over';}
+  else{el.textContent=(100-t)+'M free';el.className='ok';}
+  $('simBtn').disabled=over;
+  const ph=$('outPlaceholder'),res=$('outResult');
+  if(over){
+    res.style.display='none';ph.style.display='block';
+    ph.innerHTML='Over budget by <b style="color:var(--bad)">$'+(t-100)+'M</b><br>trim to $100M to simulate';
+  }else if(shown){
+    ph.style.display='none';res.style.display='block';computeOutcome();
+  }else{
+    res.style.display='none';ph.style.display='block';
+    ph.innerHTML='Allocate &amp; press<br>SIMULATE 2030';
+  }
 }
-function simulate(){
+function computeOutcome(){
   const a=alloc;
   const revenue=Math.round(0.5*a.prod+0.3*a.agents+0.25*a.data+0.15*a.infra);
   const cost=Math.round(0.7*a.agents+0.5*a.infra+0.3*a.data);
@@ -718,7 +731,6 @@ function simulate(){
   const roles=Math.round(a.agents*6+a.reskill*8+a.gov*5+a.sec*5+a.prod*4);
   const risk=clamp(Math.round(100-(a.gov*3+a.sec*3+a.reskill*1.5)),2,100);
 
-  $('outPlaceholder').style.display='none';$('outResult').style.display='block';
   $('oRev').textContent='+'+revenue+'%';
   $('oCost').textContent='−'+cost+'%';
   $('oProd').textContent='+'+prod+'%';
@@ -743,7 +755,7 @@ function simulate(){
   $('oWhy').innerHTML=why;
   save();
 }
-$('simBtn').addEventListener('click',simulate);
+$('simBtn').addEventListener('click',()=>{shown=true;refreshTotal();save();});
 $('resetBudg').addEventListener('click',()=>{LEVERS.forEach(l=>alloc[l.k]=l.d);buildSliders();refreshTotal();save();});
 buildSliders();refreshTotal();
 

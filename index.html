@@ -127,7 +127,12 @@
   /* ---------- stages rail ---------- */
   .stages{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
   @media(max-width:760px){.stages{grid-template-columns:1fr 1fr}}
-  .stage{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;position:relative;transition:border-color .4s,transform .4s,box-shadow .4s}
+  .stage{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;position:relative;cursor:pointer;transition:border-color .4s,transform .4s,box-shadow .4s;-webkit-tap-highlight-color:transparent}
+  .stage:hover{border-color:var(--gold-dim)}
+  .stage:focus-visible{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(216,184,119,.35)}
+  .stage .tapcue{position:absolute;top:14px;right:14px;font-family:var(--mono);font-size:9px;letter-spacing:.14em;color:var(--faint);opacity:0;transition:opacity .3s}
+  .stage:hover .tapcue,.stage:focus-visible .tapcue{opacity:1}
+  .stage.on .tapcue{opacity:1;color:var(--gold-2)}
   .stage.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold-dim),0 18px 40px -28px var(--gold);transform:translateY(-3px)}
   .stage .st-n{font-family:var(--mono);font-size:11px;color:var(--gold-dim);letter-spacing:.2em}
   .stage h4{font-family:var(--disp);font-size:16px;margin:6px 0 6px;color:var(--ink)}
@@ -340,10 +345,10 @@
       <p>The active stage is set by the slider above. Move it and watch the enterprise cross each threshold.</p>
     </div>
     <div class="stages" id="stagesEl">
-      <div class="stage" data-s="1"><div class="st-n">STAGE 1</div><h4>AI as a Tool</h4><p>AI assists individuals. Productivity rises; headcount barely moves.</p><div class="flow">dev → copilot<br>hr → resume triage<br>mktg → drafts</div></div>
-      <div class="stage" data-s="2"><div class="st-n">STAGE 2</div><h4>AI as a Coworker</h4><p>AI completes whole tasks, a human approves. 8&nbsp;min → 2&nbsp;min.</p><div class="flow">ticket in → understand<br>→ check history → draft<br>→ human approves</div></div>
-      <div class="stage" data-s="3"><div class="st-n">STAGE 3</div><h4>AI Agents</h4><p>Human → agent → tools → systems. The human manages the work, not every step.</p><div class="flow">find → research<br>→ personalize → send<br>→ follow up → update CRM</div></div>
-      <div class="stage" data-s="4"><div class="st-n">STAGE 4</div><h4>AI Workforce</h4><p>Managers supervise teams of agents. The org runs as a hybrid workforce.</p><div class="flow">leader<br>→ AI managers<br>→ research / outreach / ops</div></div>
+      <div class="stage" data-s="1"><span class="tapcue"></span><div class="st-n">STAGE 1</div><h4>AI as a Tool</h4><p>AI assists individuals. Productivity rises; headcount barely moves.</p><div class="flow">dev → copilot<br>hr → resume triage<br>mktg → drafts</div></div>
+      <div class="stage" data-s="2"><span class="tapcue"></span><div class="st-n">STAGE 2</div><h4>AI as a Coworker</h4><p>AI completes whole tasks, a human approves. 8&nbsp;min → 2&nbsp;min.</p><div class="flow">ticket in → understand<br>→ check history → draft<br>→ human approves</div></div>
+      <div class="stage" data-s="3"><span class="tapcue"></span><div class="st-n">STAGE 3</div><h4>AI Agents</h4><p>Human → agent → tools → systems. The human manages the work, not every step.</p><div class="flow">find → research<br>→ personalize → send<br>→ follow up → update CRM</div></div>
+      <div class="stage" data-s="4"><span class="tapcue"></span><div class="st-n">STAGE 4</div><h4>AI Workforce</h4><p>Managers supervise teams of agents. The org runs as a hybrid workforce.</p><div class="flow">leader<br>→ AI managers<br>→ research / outreach / ops</div></div>
     </div>
   </section>
 
@@ -544,7 +549,12 @@ function render(year){
   $('mAgents').textContent=fmt(s.agents);
 
   /* stages highlight */
-  document.querySelectorAll('.stage').forEach(el=>el.classList.toggle('on',+el.dataset.s===s.stage));
+  document.querySelectorAll('.stage').forEach(el=>{
+    const active=+el.dataset.s===s.stage;
+    el.classList.toggle('on',active);
+    const cue=el.querySelector('.tapcue');
+    if(cue)cue.textContent=active?'● ACTIVE':'TAP TO ACTIVATE';
+  });
 
   /* dept words */
   const w=deptWord(s.c);
@@ -586,6 +596,30 @@ const cap=$('cap');
 cap.addEventListener('input',()=>{render(+cap.value);save();});
 document.querySelectorAll('.ticks span').forEach(t=>{
   t.addEventListener('click',()=>{cap.value=t.dataset.y;render(+cap.value);save();});
+});
+
+/* stage cards are interactive: tapping one moves the capability slider into that stage */
+function stageMidYear(target){
+  let lo=null,hi=null;
+  for(let y=2026;y<=2035.0001;y+=0.05){
+    if(capState(y).stage===target){ if(lo===null)lo=y; hi=y; }
+  }
+  if(lo===null)return +cap.value;
+  return +(((lo+hi)/2)).toFixed(1);
+}
+document.querySelectorAll('.stage').forEach(el=>{
+  el.setAttribute('role','button');
+  el.setAttribute('tabindex','0');
+  el.setAttribute('aria-label','Activate '+el.querySelector('h4').textContent);
+  const go=()=>{
+    cap.value=stageMidYear(+el.dataset.s);
+    render(+cap.value);save();
+    document.getElementById('console').scrollIntoView({behavior:'smooth',block:'start'});
+  };
+  el.addEventListener('click',go);
+  el.addEventListener('keydown',e=>{
+    if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}
+  });
 });
 
 /* ---------- FUTURE ROLES MARKETPLACE ---------- */
